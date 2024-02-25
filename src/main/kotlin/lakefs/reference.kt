@@ -167,13 +167,12 @@ open class Reference(val repoId: String,
         return res.reference
     }
 
-        def object(self, path: str) -> StoredObject:  # pylint: disable=C0103
-        """
-            Returns an Object class representing a lakeFS object with this repo id, reference id and path
-
-            :param path: The object's path
-            """
-        return StoredObject(self._repo_id, self._id, path, self._client)
+    /**
+     * Returns an Object class representing a lakeFS object with this repo id, reference id and path
+     *
+     * @param path The object's path
+     */
+    fun `object`(path: String): StoredObject = StoredObject(repoId, id, path, client)
 }
 
 /**

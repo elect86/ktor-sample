@@ -62,7 +62,7 @@ fun main() {
         val totalBytes = branch.objects(prefix = "my_directory/").asSequence().sumOf { it.sizeBytes!! }
 
         branch.`object`("data/example.yaml")
-        repo.tag("v1").ob
+        repo.tag("v1").`object`("")
     }
 
     val api = RepositoriesApi(defaultClient)
