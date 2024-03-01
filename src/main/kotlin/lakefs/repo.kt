@@ -3,10 +3,11 @@ package lakefs
 import io.lakefs.clients.sdk.ApiClient
 import io.lakefs.clients.sdk.ApiException
 import io.lakefs.clients.sdk.model.Ref
+import io.lakefs.clients.sdk.model.Repository
 import io.lakefs.clients.sdk.model.RepositoryCreation
 
 class Repo(val id: String,
-           client: ApiClient) : BaseLakeFSObject(client) {
+           client: ApiClient) : BaseLakeFSObject(client), AutoCloseable {
 
     /** Return the repository's properties object */
     var properties: RepositoryProperties? = null
@@ -17,6 +18,10 @@ class Repo(val id: String,
             }
             return field
         }
+
+
+    internal var monkeyCreateRepository: ((repositoryCreation: RepositoryCreation) -> Repository)? = null
+    internal var monkeyGetRepository: ((id: String) -> Repository)? = null
 
     /**
      * Create a new repository in lakeFS from this object
@@ -34,26 +39,29 @@ class Repo(val id: String,
     fun create(storageNamespace: String,
                defaultBranch: String = "main",
                includeSamples: Boolean = false,
-               existOk: Boolean = false): Repo =
-        try {
+               existOk: Boolean = false): Repo {
+
+        val repo = try {
             val repositoryCreation = RepositoryCreation()
                 .name(id)
                 .storageNamespace(storageNamespace)
                 .defaultBranch(defaultBranch)
                 .sampleData(includeSamples)
-            val repo = client.repositoriesApi.createRepository(repositoryCreation).execute()
-            properties = RepositoryProperties(repo)
-            this
+            monkeyCreateRepository?.invoke(repositoryCreation) ?: client.repositoriesApi.createRepository(repositoryCreation).execute()
         } catch (ex: ApiException) {
-            if (existOk) {
-                val getRepo = client.repositoriesApi.getRepository(id).execute()
-                properties = RepositoryProperties(getRepo)
-                this
-            } else throw ex
+            if (existOk)
+                monkeyGetRepository?.invoke(id) ?: client.repositoriesApi.getRepository(id).execute()
+            else
+                throw ex
         }
+        properties = RepositoryProperties(repo)
+        return this
+    }
 
+
+    internal var monkeyDeleteRepository: (() -> Unit)? = null
     /** Delete repository from lakeFS server */
-    fun delete() = client.repositoriesApi.deleteRepository(id).execute()
+    fun delete() = monkeyDeleteRepository?.invoke() ?: client.repositoriesApi.deleteRepository(id).execute()
 
     /**
      * Return a branch object using the current repository id and client
@@ -126,4 +134,6 @@ class Repo(val id: String,
     /** Returns the repository metadata */
     val metadata: MutableMap<String, String>
         get() = client.repositoriesApi.getRepositoryMetadata(id).execute()
+
+    override fun close() = delete()
 }

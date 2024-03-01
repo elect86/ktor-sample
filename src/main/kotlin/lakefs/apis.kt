@@ -1,6 +1,9 @@
 package lakefs
 
 import io.lakefs.clients.sdk.*
+import java.lang.invoke.MethodHandle
+import java.lang.invoke.MethodHandles
+import kotlin.reflect.jvm.javaGetter
 
 // APIs
 val ApiClient.actionsApi: ActionsApi
@@ -33,3 +36,20 @@ val ApiClient.stagingApi: StagingApi
     get() = StagingApi(this)
 val ApiClient.tagsApi: TagsApi
     get() = TagsApi(this)
+
+val topLevelClass = object{}.javaClass.enclosingClass
+
+fun main() {
+//    MethodHandles.loo
+//    println(topLevelClass)
+//    println(this::class ApiClient::actionsApi.getter.invoke(ApiClient()))
+//    for(method in topLevelClass::class.kcl)
+//    for(method in MethodHandles.lookup().lookupClass().declaredMethods) {
+//        method.isAccessible = true
+//        method.
+//    }
+//        println(method)
+//    method.isAccessible = true
+//    println(method.invoke(null, 9.0)) // returns 3.0
+//    println(method.invoke(null, 16.0)) // returns 3.0
+}

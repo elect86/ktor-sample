@@ -3,6 +3,7 @@
 package lakefs
 
 import io.lakefs.clients.sdk.ApiClient
+import io.lakefs.clients.sdk.ApiException
 import io.lakefs.clients.sdk.model.Commit
 import io.lakefs.clients.sdk.model.CommitList
 import io.lakefs.clients.sdk.model.Diff
@@ -12,6 +13,7 @@ import io.lakefs.clients.sdk.model.ObjectStats
 import io.lakefs.clients.sdk.model.ObjectStatsList
 import io.lakefs.clients.sdk.model.Ref
 import io.lakefs.clients.sdk.model.RefList
+import java.io.File
 import kotlin.experimental.ExperimentalTypeInference
 
 /**
@@ -28,9 +30,11 @@ import kotlin.experimental.ExperimentalTypeInference
  *
  *  See https://docs.lakefs.io/understand/model.html#ref-expressions for details.
  */
-open class Reference(val repoId: String,
-                     val id: String,
-                     client: ApiClient) : BaseLakeFSObject(client) {
+open class Reference(
+    val repoId: String,
+    val id: String,
+    client: ApiClient
+                    ) : BaseLakeFSObject(client) {
 
     /**
      * Returns an object generator for this reference, the generator can yield either a StoredObject or a CommonPrefix
@@ -45,10 +49,12 @@ open class Reference(val repoId: String,
     //     *             :raise NotAuthorizedException: if user is not authorized to perform this operation
     //     *             :raise ServerException: for any other errors
      */
-    fun objects(maxAmount: Int? = null,
-                after: String? = null,
-                prefix: String? = null,
-                delimiter: String): Iterator<WithPath/*StoredObject | CommonPrefix*/> =
+    fun objects(
+        maxAmount: Int? = null,
+        after: String? = null,
+        prefix: String? = null,
+        delimiter: String
+               ): Iterator<WithPath/*StoredObject | CommonPrefix*/> =
         iterator {
             for (res in generateListing(maxAmount, after) { after ->
                 client.objectsApi.listObjects(repoId, id)
@@ -78,9 +84,11 @@ open class Reference(val repoId: String,
     //     *             :raise NotAuthorizedException: if user is not authorized to perform this operation
     //     *             :raise ServerException: for any other errors
      */
-    fun objects(maxAmount: Int? = null,
-                after: String? = null,
-                prefix: String? = null): Iterator<ObjectInfo> =
+    fun objects(
+        maxAmount: Int? = null,
+        after: String? = null,
+        prefix: String? = null
+               ): Iterator<ObjectInfo> =
         iterator {
             for (res in generateListing(maxAmount, after) { after ->
                 client.objectsApi.listObjects(repoId, id)
@@ -104,7 +112,9 @@ open class Reference(val repoId: String,
      */
     fun log(maxAmount: Int? = null): Iterator<Commit> =
         iterator {
-            for (res in generateListing(maxAmount) { after -> client.refsApi.logCommits(repoId, id).after(after).execute() })
+            for (res in generateListing(maxAmount) { after ->
+                client.refsApi.logCommits(repoId, id).after(after).execute()
+            })
                 yield(res)
         }
 
@@ -115,7 +125,11 @@ open class Reference(val repoId: String,
     //     *         :raise NotAuthorizedException: if user is not authorized to perform this operation
     //     *         :raise ServerException: for any other errors
      */
-    var commit: Commit? = client.commitsApi.getCommit(repoId, id).execute()
+    var commit: Commit? = try {
+        client.commitsApi.getCommit(repoId, id).execute()
+    } catch (e: ApiException) {
+        null
+    }
 
     /**
      * Returns a diff generator of changes between this reference and other_ref
@@ -130,11 +144,13 @@ open class Reference(val repoId: String,
     //     *         :raise NotAuthorizedException: if user is not authorized to perform this operation
     //     *         :raise ServerException: for any other errors
      */
-    fun diff(otherRef: ReferenceType,
-             maxAmount: Int? = null,
-             after: String? = null,
-             prefix: String? = null,
-             delimiter: String? = null): Iterator<Change> {
+    fun diff(
+        otherRef: ReferenceType,
+        maxAmount: Int? = null,
+        after: String? = null,
+        prefix: String? = null,
+        delimiter: String? = null
+            ): Iterator<Change> {
         val otherRefId = getId(otherRef)
         return iterator {
             for (diff in generateListing(maxAmount, after) { after ->
@@ -172,7 +188,8 @@ open class Reference(val repoId: String,
      *
      * @param path The object's path
      */
-    fun `object`(path: String): StoredObject = StoredObject(repoId, id, path, client)
+    fun storedObject(path: String): StoredObject = StoredObject(repoId, id, path, client)
+    infix fun `object`(path: String): File = client.objectsApi.getObject(repoId, id, path).execute()
 }
 
 /**
@@ -185,8 +202,10 @@ open class Reference(val repoId: String,
  */
 @OverloadResolutionByLambdaReturnType
 @JvmName("genRef")
-fun generateListing(maxAmount: Int? = null, after: String? = null,
-                    func: (after: String?) -> RefList) = iterator<Ref> {
+fun generateListing(
+    maxAmount: Int? = null, after: String? = null,
+    func: (after: String?) -> RefList
+                   ) = iterator<Ref> {
     var maxAmount = maxAmount
     var after = after
     var hasMore = true
@@ -216,8 +235,10 @@ fun generateListing(maxAmount: Int? = null, after: String? = null,
  */
 @OverloadResolutionByLambdaReturnType
 @JvmName("genCommit")
-fun generateListing(maxAmount: Int? = null, after: String? = null,
-                    func: (after: String?) -> CommitList) = iterator<Commit> {
+fun generateListing(
+    maxAmount: Int? = null, after: String? = null,
+    func: (after: String?) -> CommitList
+                   ) = iterator<Commit> {
     var maxAmount = maxAmount
     var after = after
     var hasMore = true
@@ -247,8 +268,10 @@ fun generateListing(maxAmount: Int? = null, after: String? = null,
  */
 @OverloadResolutionByLambdaReturnType
 @JvmName("genDiff")
-fun generateListing(maxAmount: Int? = null, after: String? = null,
-                    func: (after: String?) -> DiffList) = iterator<Diff> {
+fun generateListing(
+    maxAmount: Int? = null, after: String? = null,
+    func: (after: String?) -> DiffList
+                   ) = iterator<Diff> {
     var maxAmount = maxAmount
     var after = after
     var hasMore = true
@@ -279,8 +302,10 @@ fun generateListing(maxAmount: Int? = null, after: String? = null,
  */
 @OverloadResolutionByLambdaReturnType
 @JvmName("genObjectStats")
-fun generateListing(maxAmount: Int? = null, after: String? = null,
-                    func: (after: String?) -> ObjectStatsList) = iterator<ObjectStats> {
+fun generateListing(
+    maxAmount: Int? = null, after: String? = null,
+    func: (after: String?) -> ObjectStatsList
+                   ) = iterator<ObjectStats> {
     var maxAmount = maxAmount
     var after = after
     var hasMore = true

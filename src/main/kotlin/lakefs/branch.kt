@@ -8,9 +8,9 @@ import io.lakefs.clients.sdk.model.Commit
 import io.lakefs.clients.sdk.model.CommitCreation
 import io.lakefs.clients.sdk.model.ObjectErrorList
 import io.lakefs.clients.sdk.model.PathList
+import io.lakefs.clients.sdk.model.Ref
 import io.lakefs.clients.sdk.model.ResetCreation
 import io.lakefs.clients.sdk.model.RevertCreation
-import java.io.File
 
 open class BaseBranch(repoId: String,
                       id: String,
@@ -21,7 +21,7 @@ open class BaseBranch(repoId: String,
      *
      * @param path The object's path
      */
-    fun `object`(path: String): File = client.objectsApi.getObject(repoId, id, path).execute()
+//    fun `object`(path: String): File = client.objectsApi.getObject(repoId, id, path).execute()
 
     /**
      * Returns a diff generator of uncommitted changes on this branch
@@ -121,6 +121,9 @@ class Branch(repositoryId: String,
         return client.branchesApi.cherryPick(repoId, id, cherryPickCreation).execute()
     }
 
+
+    internal var monkeyCreateBranch: ((repository: String, branchCreation: BranchCreation) -> Unit)? = null
+
     /**
      * Create a new branch in lakeFS from this object
      *
@@ -145,7 +148,9 @@ class Branch(repositoryId: String,
         val referenceId = getId(sourceReference)
         val branchCreation = BranchCreation().name(id).source(referenceId)
         try {
-            client.branchesApi.createBranch(repoId, branchCreation).execute()
+//            println("repoId: $repoId")
+//            println("branchCreation: $branchCreation")
+            monkeyCreateBranch?.invoke(repoId, branchCreation) ?: client.branchesApi.createBranch(repoId, branchCreation).execute()
         } catch (e: ApiException) {
             if (!existOk)
                 throw e
@@ -153,12 +158,17 @@ class Branch(repositoryId: String,
         return this
     }
 
+    internal var monkeyGetBranch: ((repository: String, branch: String) -> Ref)? = null
+
     /** Get the commit reference this branch is pointing to */
     val head: Reference
         get() {
-            val branch = client.branchesApi.getBranch(repoId, id).execute()
+            val branch = monkeyGetBranch?.invoke(repoId, id) ?: client.branchesApi.getBranch(repoId, id).execute()
             return Reference(repoId, branch.commitId, client)
         }
+
+
+    internal var monkeyCommit: ((repository: String, branch: String, commitCreation: CommitCreation) -> Commit)? = null
 
     /**
      * Commit changes on the current branch
@@ -172,13 +182,16 @@ class Branch(repositoryId: String,
     //     *         :raise NotAuthorizedException: if user is not authorized to perform this operation
     //     *         :raise ServerException: for any other errors
      */
-    fun commit(message: String, metadata: Map<String, String>? = null): Reference {
-        val commitsCreation = CommitCreation().message(message).metadata(metadata)
+    fun commit(message: String, metadata: Map<String, String>? = null, allowEmpty: Boolean? = null/*, ignoredField: String? = null*/): Reference {
+        val commitsCreation = CommitCreation().message(message).metadata(metadata).allowEmpty(allowEmpty)
 
 //        with api_exception_handler ():
-        val c = client.commitsApi.commit(repoId, id, commitsCreation).execute()
+        val c = monkeyCommit?.invoke(repoId, id, commitsCreation) ?: client.commitsApi.commit(repoId, id, commitsCreation).execute()
         return Reference(repoId, c.id, client)
     }
+
+
+    internal var monkeyDeleteBranch: ((repository: String, branch: String) -> Unit)? = null
 
     /**
      * Delete branch from lakeFS server
@@ -188,7 +201,11 @@ class Branch(repositoryId: String,
 //     *         :raise ForbiddenException: for branches that are protected
 //     *         :raise ServerException: for any other errors
      */
-    fun delete() = client.branchesApi.deleteBranch(repoId, id).execute()
+    fun delete() = monkeyDeleteBranch?.invoke(repoId, id) ?: client.branchesApi.deleteBranch(repoId, id).execute()
+
+
+    internal var monkeyRevertBranch: ((repository: String, branch: String, revertCreation: RevertCreation) -> Unit)? = null
+    internal var monkeyGetCommit: ((repository: String, commitId: String) -> Commit)? = null
 
     /**
      * revert the changes done by the provided reference on the current branch
@@ -207,10 +224,11 @@ class Branch(repositoryId: String,
 //     *         :raise ServerException: for any other errors
      */
     fun revert(reference: ReferenceType, parentNumber: Int = 0): Commit {
-        check(parentNumber >= 0) { "parentNumber must be greater than or equal to 0" }
+        require(parentNumber >= 0) { "parentNumber must be greater than or equal to 0" }
 
-        client.branchesApi.revertBranch(repoId, id, RevertCreation().ref(getId(reference)).parentNumber(parentNumber)).execute()
-        return client.commitsApi.getCommit(repoId, id).execute()
+        val revertCreation = RevertCreation().ref(getId(reference)).parentNumber(parentNumber)
+        monkeyRevertBranch?.invoke(repoId, id, revertCreation) ?: client.branchesApi.revertBranch(repoId, id, revertCreation).execute()
+        return monkeyGetCommit?.invoke(repoId, id) ?: client.commitsApi.getCommit(repoId, id).execute()
     }
 
 //    def import_data(self, commit_message: str = "", metadata: Optional[dict] = None) -> ImportManager:

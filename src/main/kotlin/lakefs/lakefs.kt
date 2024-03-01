@@ -56,18 +56,19 @@ class ScopedClient {
         jwtToken.block()
     }
 
-    val repos: List<Repo>
-        get() = repos()
-
-    fun repos(prefix: String? = null, after: String? = null, amount: Int? = null): List<Repo> =
-        defaultApiClient.repositoriesApi.listRepositories()
-            .prefix(prefix)
-            .after(after)
-            .amount(amount)
-            .execute().results.map { Repo(it.id, defaultApiClient) }
-
-    fun repo(id: String) = Repo(id, defaultApiClient)
 }
+
+val ApiClient.repos: List<Repo>
+    get() = repos()
+
+fun ApiClient.repos(prefix: String? = null, after: String? = null, amount: Int? = null): List<Repo> =
+    repositoriesApi.listRepositories()
+        .prefix(prefix)
+        .after(after)
+        .amount(amount)
+        .execute().results.map { Repo(it.id, this) }
+
+fun ApiClient.repo(id: String) = Repo(id, this)
 
 //class RepositoryProperties(LenientNamedTuple):
 //    """

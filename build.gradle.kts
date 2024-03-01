@@ -32,5 +32,13 @@ dependencies {
     implementation("io.ktor:ktor-serialization-kotlinx-json:$ktor_version")
     implementation("ch.qos.logback:logback-classic:$logback_version")
     testImplementation("io.ktor:ktor-server-tests-jvm")
-    testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
+//    testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
+
+    testImplementation(kotlin("test"))
+    testImplementation("io.mockk:mockk:1.13.9")
+}
+
+tasks.test {
+    useJUnitPlatform()
+    systemProperty("io.mockk.classdump.path", "/home/elect/IdeaProjects/ktor-sample/build/mockk")
 }
