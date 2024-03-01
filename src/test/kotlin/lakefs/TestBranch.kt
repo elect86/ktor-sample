@@ -55,13 +55,11 @@ class TestBranch : Common() {
         val branch = testBranch
         val commitId = "1234"
 
-        fun monkeyGetBranch(repoName: String, branchName: String): Ref {
+        branch.monkeyGetBranch = { repoName: String, branchName: String ->
             assert(repoName == branch.repoId)
             assert(branchName == branch.id)
-            return Ref().commitId(commitId).id(branch.id)
+            Ref().commitId(commitId).id(branch.id)
         }
-
-        branch.monkeyGetBranch = ::monkeyGetBranch
         val res = branch.head
         assert(res.id == commitId)
         assert(res.repoId == branch.repoId)
@@ -75,13 +73,13 @@ class TestBranch : Common() {
         val commitId = "1234"
         val commitMessage = "test message"
 
-        fun monkeyCommit(repoName: String, branchName: String, commitCreation: CommitCreation): Commit {
+        branch.monkeyCommit = { repoName: String, branchName: String, commitCreation: CommitCreation ->
             assert(repoName == branch.repoId)
             assert(branchName == branch.id)
             assert(commitCreation.message == commitMessage)
             assert(commitCreation.metadata == md)
             assert(commitCreation.allowEmpty!!)
-            return Commit()
+            Commit()
                 .id(commitId)
                 .parents(listOf(""))
                 .committer("Committer")
@@ -89,8 +87,6 @@ class TestBranch : Common() {
                 .creationDate(123)
                 .metaRangeId("")
         }
-
-        branch.monkeyCommit = ::monkeyCommit
         val res = branch.commit(commitMessage, metadata = md, allowEmpty = true/*, "ignoredField" to "test"*/)
         assert(res.id == commitId)
     }
@@ -99,12 +95,10 @@ class TestBranch : Common() {
     fun testBranchDelete() {
         val branch = testBranch
 
-        fun monkeyDeleteBranch(repoName: String, branchName: String) {
+        branch.monkeyDeleteBranch = { repoName: String, branchName: String ->
             assert(repoName == branch.repoId)
             assert(branchName == branch.id)
         }
-
-        branch.monkeyDeleteBranch = ::monkeyDeleteBranch
         branch.delete()
     }
 
@@ -114,17 +108,17 @@ class TestBranch : Common() {
         val refId = "ab1234"
         var expectedParent = 0
 
-        fun monkeyRevertBranch(repoName: String, branchName: String, revertBranchCreation: RevertCreation) {
+        // Test default parent number
+        branch.monkeyRevertBranch = { repoName: String, branchName: String, revertBranchCreation: RevertCreation ->
             assert(repoName == branch.repoId)
             assert(branchName == branch.id)
             assert(revertBranchCreation.ref == refId)
             assert(revertBranchCreation.parentNumber == expectedParent) // default value
         }
-
-        fun monkeyGetCommit(repoName: String, refName: String): Commit {
+        branch.monkeyGetCommit = { repoName: String, refName: String ->
             assert(repoName == branch.repoId)
             assert(refName == branch.id)
-            return Commit()
+            Commit()
                 .id(refId)
                 .parents(listOf(""))
                 .committer("Committer")
@@ -132,10 +126,6 @@ class TestBranch : Common() {
                 .creationDate(0)
                 .metaRangeId("")
         }
-
-        // Test default parent number
-        branch.monkeyRevertBranch = ::monkeyRevertBranch
-        branch.monkeyGetCommit = ::monkeyGetCommit
         branch.revert(refId)
         expectedParent = 2
         // Test set parent number
@@ -146,19 +136,19 @@ class TestBranch : Common() {
 
         expectedParent = 0
         // reference_id passed, but not reference
-//        with pytest . warns (DeprecationWarning, match = "reference_id is deprecated.*"):
-//        branch.revert(None, reference_id = refId)
+        //        with pytest . warns (DeprecationWarning, match = "reference_id is deprecated.*"):
+        //        branch.revert(None, reference_id = refId)
 
         // neither reference nor reference_id passed
-//        with pytest . raises (ValueError, match = ".* must be specified"):
-//        branch.revert(None)
+        //        with pytest . raises (ValueError, match = ".* must be specified"):
+        //        branch.revert(None)
 
         // both are passed, prefer ``reference_id``
-//        with pytest . warns (DeprecationWarning, match = "reference_id is deprecated.*"):
-//        # this is not a high-quality test, but it would throw if the revert API
-//        # was called with reference "hello" due to the monkey - patching above
-//        # always returning "ab1234" as ref ID .
-//        c = branch.revert(refId, reference_id = "hello")
-//        assert c . id == ref_id
+        //        with pytest . warns (DeprecationWarning, match = "reference_id is deprecated.*"):
+        //        # this is not a high-quality test, but it would throw if the revert API
+        //        # was called with reference "hello" due to the monkey - patching above
+        //        # always returning "ab1234" as ref ID .
+        //        c = branch.revert(refId, reference_id = "hello")
+        //        assert c . id == ref_id
     }
 }

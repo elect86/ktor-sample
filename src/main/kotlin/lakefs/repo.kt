@@ -89,7 +89,7 @@ class Repo(val id: String,
      * Return a tag object using the current repository id and client
      * @param tagId name of the tag
      */
-    fun tag(tagId: String) = Tag(id, tagId, client)
+    infix fun tag(tagId: String) = Tag(id, tagId, client)
 
     /**
      * Returns a generator listing for branches on the given repository
