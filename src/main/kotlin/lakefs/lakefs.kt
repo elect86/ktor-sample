@@ -68,7 +68,7 @@ fun ApiClient.repos(prefix: String? = null, after: String? = null, amount: Int? 
         .amount(amount)
         .execute().results.map { Repo(it.id, this) }
 
-fun ApiClient.repo(id: String) = Repo(id, this)
+infix fun ApiClient.repo(id: String) = Repo(id, this)
 
 //class RepositoryProperties(LenientNamedTuple):
 //    """

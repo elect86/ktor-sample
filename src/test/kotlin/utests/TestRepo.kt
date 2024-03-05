@@ -1,8 +1,12 @@
-package lakefs
+package utests
 
 import io.lakefs.clients.sdk.ApiException
 import io.lakefs.clients.sdk.model.Repository
 import io.lakefs.clients.sdk.model.RepositoryCreation
+import lakefs.ConflictException
+import lakefs.NotAuthorizedException
+import lakefs.NotFoundException
+import lakefs.RepositoryProperties
 import org.junit.jupiter.api.assertThrows
 import kotlin.test.Test
 

@@ -1,4 +1,5 @@
 @file:OptIn(ExperimentalTypeInference::class)
+@file:Suppress("NAME_SHADOWING")
 
 package lakefs
 
@@ -99,10 +100,14 @@ open class Reference(val repoId: String,
     //     *         :raise NotAuthorizedException: if user is not authorized to perform this operation
     //     *         :raise ServerException: for any other errors
      */
-    fun log(maxAmount: Int? = null): Iterator<Commit> =
+    fun log(maxAmount: Int? = null, after: String? = null, amount: Int? = null, limit: Boolean? = null): Iterator<Commit> =
         iterator {
-            for (res in generateListing(maxAmount) { after ->
-                monkeyLogCommits?.invoke(repoId, id) ?: client.refsApi.logCommits(repoId, id).after(after).execute()
+            for (res in generateListing(maxAmount, after) { after ->
+                monkeyLogCommits?.invoke(repoId, id) ?: client.refsApi.logCommits(repoId, id)
+                    .after(after)
+                    .amount(amount)
+                    .limit(limit)
+                    .execute()
             })
                 yield(res)
         }
@@ -114,11 +119,14 @@ open class Reference(val repoId: String,
     //     *         :raise NotAuthorizedException: if user is not authorized to perform this operation
     //     *         :raise ServerException: for any other errors
      */
-    var commit: Commit? = try {
-        client.commitsApi.getCommit(repoId, id).execute()
-    } catch (e: ApiException) {
-        null
-    }
+    var commit: Commit? = null
+        get() {
+            if (field == null)
+                field = withApiExceptionHandler {
+                    client.commitsApi.getCommit(repoId, id).execute()
+                }
+            return field
+        }
 
 
     internal var monkeyDiffRefs: ((repository: String, leftRef: String, rightLeft: String) -> DiffList)? = null
@@ -139,16 +147,19 @@ open class Reference(val repoId: String,
     fun diff(otherRef: ReferenceType,
              maxAmount: Int? = null,
              after: String? = null,
+             amount: Int? = null,
              prefix: String? = null,
-             delimiter: String? = null): Iterator<Change> {
+             delimiter: String? = null,
+             type: String? = null): Iterator<Change> {
         val otherRefId = getId(otherRef)
         return iterator {
             for (diff in generateListing(maxAmount, after) { after ->
                 monkeyDiffRefs?.invoke(repoId, id, otherRefId) ?: client.refsApi.diffRefs(repoId, id, otherRefId)
                     .after(after)
-                    .amount(maxAmount)
+                    .amount(amount)
                     .prefix(prefix)
                     .delimiter(delimiter)
+                    .type(type)
                     .execute()
             })
                 yield(Change(diff))
@@ -165,10 +176,13 @@ open class Reference(val repoId: String,
     //     *         :raise NotAuthorizedException: if user is not authorized to perform this operation
     //     *         :raise ServerException: for any other errors
      */
-    fun mergeInto(destinationBranch: ReferenceType, merge: Merge? = null): String {
+    fun mergeInto(destinationBranch: ReferenceType, message: String? = null): String {
         val branchId = getId(destinationBranch)
         //        val merge = lakefs_sdk.Merge(** kwargs)
-
+        val merge = when {
+            message != null -> Merge().apply { message(message) }
+            else -> null
+        }
         val res = client.refsApi.mergeIntoBranch(repoId, id, branchId).merge(merge).execute()
         return res.reference
     }

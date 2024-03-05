@@ -24,8 +24,9 @@ class Tag(repositoryId: String,
 
         try {
             client.tagsApi.createTag(repoId, tagCreation).execute()
-        } catch (e: ApiException) {
-            if (!existOk) throw e
+        } catch (ex: ApiException) {
+            if (!existOk)
+                throw ex.specificException
         }
 
         return this
@@ -38,7 +39,7 @@ class Tag(repositoryId: String,
 //     *         :raise NotFoundException: if source_ref_id doesn't exist on the lakeFS server
 //     *         :raise ServerException: for any other errors
      */
-    fun delete() {
+    fun delete() = withApiExceptionHandler{
         client.tagsApi.deleteTag(repoId, id).execute()
         commit = null
     }

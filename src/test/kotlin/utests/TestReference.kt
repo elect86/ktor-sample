@@ -1,10 +1,12 @@
-package lakefs
+package utests
 
 import io.lakefs.clients.sdk.model.Commit
 import io.lakefs.clients.sdk.model.CommitList
 import io.lakefs.clients.sdk.model.Diff
 import io.lakefs.clients.sdk.model.DiffList
 import io.lakefs.clients.sdk.model.Pagination
+import lakefs.Reference
+import lakefs.Repo
 import kotlin.test.Test
 
 class TestReference : Common() {

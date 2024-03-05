@@ -2,6 +2,8 @@ package lakefs
 
 import io.lakefs.clients.sdk.ApiClient
 import io.lakefs.clients.sdk.ApiException
+import io.lakefs.clients.sdk.model.ObjectStats
+import java.nio.file.Files
 
 /** Class representing an object in lakeFS. */
 class StoredObject(val repoId: String,
@@ -74,4 +76,18 @@ class StoredObject(val repoId: String,
 //
 //    return WriteableObject(repository_id=self._repo_id, reference_id=destination_branch_id, path=destination_path,
 //    client=self._client)
+
+    infix fun upload(data: String): ObjectStats {
+        val file = Files.createTempFile("", ".tmp").toFile()
+        file.writeText(data)
+        return client.objectsApi.uploadObject(repoId, refId, path).content(file).execute()
+    }
+
+    infix fun upload(data: ByteArray): ObjectStats {
+        val file = Files.createTempFile("", ".tmp").toFile()
+        file.writeBytes(data)
+        return client.objectsApi.uploadObject(repoId, refId, path).content(file).execute()
+    }
+
+    fun delete() = client.objectsApi.deleteObject(repoId, refId, path).execute()
 }

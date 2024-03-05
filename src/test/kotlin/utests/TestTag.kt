@@ -1,5 +1,6 @@
-package lakefs
+package utests
 
+import lakefs.Repo
 import kotlin.test.Test
 
 class TestTag : Common() {

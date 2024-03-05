@@ -21,7 +21,7 @@ open class BaseBranch(repoId: String,
      *
      * @param path The object's path
      */
-//    fun `object`(path: String): File = client.objectsApi.getObject(repoId, id, path).execute()
+    //    fun `object`(path: String): File = client.objectsApi.getObject(repoId, id, path).execute()
 
     /**
      * Returns a diff generator of uncommitted changes on this branch
@@ -36,7 +36,9 @@ open class BaseBranch(repoId: String,
      */
     fun uncommitted(maxAmount: Int? = null, after: String? = null, prefix: String? = null): Iterator<Change> =
         iterator {
-            for (diff in generateListing(maxAmount, after) { after -> client.branchesApi.diffBranch(repoId, id).after(after).prefix(prefix).execute() })
+            for (diff in generateListing(maxAmount, after) { after ->
+                client.branchesApi.diffBranch(repoId, id).after(after).prefix(prefix).execute()
+            })
                 yield(Change(diff))
         }
 
@@ -148,12 +150,10 @@ class Branch(repositoryId: String,
         val referenceId = getId(sourceReference)
         val branchCreation = BranchCreation().name(id).source(referenceId)
         try {
-//            println("repoId: $repoId")
-//            println("branchCreation: $branchCreation")
             monkeyCreateBranch?.invoke(repoId, branchCreation) ?: client.branchesApi.createBranch(repoId, branchCreation).execute()
-        } catch (e: ApiException) {
+        } catch (ex: ApiException) {
             if (!existOk)
-                throw e
+                throw ex.specificException
         }
         return this
     }
@@ -162,9 +162,9 @@ class Branch(repositoryId: String,
 
     /** Get the commit reference this branch is pointing to */
     val head: Reference
-        get() {
+        get() = withApiExceptionHandler {
             val branch = monkeyGetBranch?.invoke(repoId, id) ?: client.branchesApi.getBranch(repoId, id).execute()
-            return Reference(repoId, branch.commitId, client)
+            Reference(repoId, branch.commitId, client)
         }
 
 
@@ -185,7 +185,7 @@ class Branch(repositoryId: String,
     fun commit(message: String, metadata: Map<String, String>? = null, allowEmpty: Boolean? = null/*, ignoredField: String? = null*/): Reference {
         val commitsCreation = CommitCreation().message(message).metadata(metadata).allowEmpty(allowEmpty)
 
-//        with api_exception_handler ():
+        //        with api_exception_handler ():
         val c = monkeyCommit?.invoke(repoId, id, commitsCreation) ?: client.commitsApi.commit(repoId, id, commitsCreation).execute()
         return Reference(repoId, c.id, client)
     }
@@ -196,10 +196,10 @@ class Branch(repositoryId: String,
     /**
      * Delete branch from lakeFS server
      *
-//     *         :raise NotFoundException: if branch or repository do not exist
-//     *         :raise NotAuthorizedException: if user is not authorized to perform this operation
-//     *         :raise ForbiddenException: for branches that are protected
-//     *         :raise ServerException: for any other errors
+    //     *         :raise NotFoundException: if branch or repository do not exist
+    //     *         :raise NotAuthorizedException: if user is not authorized to perform this operation
+    //     *         :raise ForbiddenException: for branches that are protected
+    //     *         :raise ServerException: for any other errors
      */
     fun delete() = monkeyDeleteBranch?.invoke(repoId, id) ?: client.branchesApi.deleteBranch(repoId, id).execute()
 
@@ -210,18 +210,18 @@ class Branch(repositoryId: String,
     /**
      * revert the changes done by the provided reference on the current branch
      *
-//     *         :param reference_id: (Optional) The reference ID to revert
-//     *
-//     *             .. deprecated:: 0.4.0
-//     *                 Use ``reference`` instead.
+    //     *         :param reference_id: (Optional) The reference ID to revert
+    //     *
+    //     *             .. deprecated:: 0.4.0
+    //     *                 Use ``reference`` instead.
      *
      * @param parentNumber when reverting a merge commit, the parent number (starting from 1) relative to which to
      *             perform the revert. The default for non merge commits is 0
      * @param reference the reference to revert
      * @return The commit created by the revert
-//     *         :raise NotFoundException: if branch by this id does not exist
-//     *         :raise NotAuthorizedException: if user is not authorized to perform this operation
-//     *         :raise ServerException: for any other errors
+    //     *         :raise NotFoundException: if branch by this id does not exist
+    //     *         :raise NotAuthorizedException: if user is not authorized to perform this operation
+    //     *         :raise ServerException: for any other errors
      */
     fun revert(reference: ReferenceType, parentNumber: Int = 0): Commit {
         require(parentNumber >= 0) { "parentNumber must be greater than or equal to 0" }
@@ -231,56 +231,56 @@ class Branch(repositoryId: String,
         return monkeyGetCommit?.invoke(repoId, id) ?: client.commitsApi.getCommit(repoId, id).execute()
     }
 
-//    def import_data(self, commit_message: str = "", metadata: Optional[dict] = None) -> ImportManager:
-//    """
-//        Import data to lakeFS
-//
-//        :param metadata: metadata to attach to the commit
-//        :param commit_message: once the data is imported, a commit is created with this message. If default (empty)
-//            message is provided, uses the default server commit message for imports.
-//        :return: an ImportManager object
-//        """
-//    return ImportManager(self._repo_id, self._id, commit_message, metadata, self._client)
+    //    def import_data(self, commit_message: str = "", metadata: Optional[dict] = None) -> ImportManager:
+    //    """
+    //        Import data to lakeFS
+    //
+    //        :param metadata: metadata to attach to the commit
+    //        :param commit_message: once the data is imported, a commit is created with this message. If default (empty)
+    //            message is provided, uses the default server commit message for imports.
+    //        :return: an ImportManager object
+    //        """
+    //    return ImportManager(self._repo_id, self._id, commit_message, metadata, self._client)
 
-//    @contextmanager
-//    def transact(self, commit_message: str = "", commit_metadata: Optional[Dict] = None,
-//    delete_branch_on_error: bool = True) -> _Transaction:
-//    """
-//        Create a transaction for multiple operations.
-//        Transaction allows for multiple modifications to be performed atomically on a branch,
-//        similar to a database transaction.
-//        It ensures that the branch remains unaffected until the transaction is successfully completed.
-//        The process includes:
-//
-//        1. Creating an ephemeral branch from this branch
-//        2. Perform object operations on ephemeral branch
-//        3. Commit changes
-//        4. Merge back to source branch
-//        5. Delete ephemeral branch
-//
-//        Using a transaction the code for this flow will look like this:
-//
-//        .. code-block:: python
-//
-//            import lakefs
-//
-//            branch = lakefs.repository("<repository_name>").branch("<branch_name>")
-//            with branch.transact(commit_message="my transaction") as tx:
-//                for obj in tx.objects(prefix="prefix_to_delete/"):  # Delete some objects
-//                    obj.delete()
-//
-//                # Create new object
-//                tx.object("new_object").upload("new object data")
-//
-//        Note that unlike database transactions, lakeFS transaction does not take a "lock" on the branch, and therefore
-//        the transaction might fail due to changes in source branch after the transaction was created.
-//
-//        :param commit_message: once the transaction is committed, a commit is created with this message
-//        :param commit_metadata: user metadata for the transaction commit
-//        :param delete_branch_on_error: Defaults to True. Ensures ephemeral branch is deleted on error.
-//        :return: a Transaction object to perform the operations on
-//        """
-//    with Transaction(self._repo_id, self._id, commit_message, commit_metadata, delete_branch_on_error,
-//    self._client) as tx:
-//    yield tx
+    //    @contextmanager
+    //    def transact(self, commit_message: str = "", commit_metadata: Optional[Dict] = None,
+    //    delete_branch_on_error: bool = True) -> _Transaction:
+    //    """
+    //        Create a transaction for multiple operations.
+    //        Transaction allows for multiple modifications to be performed atomically on a branch,
+    //        similar to a database transaction.
+    //        It ensures that the branch remains unaffected until the transaction is successfully completed.
+    //        The process includes:
+    //
+    //        1. Creating an ephemeral branch from this branch
+    //        2. Perform object operations on ephemeral branch
+    //        3. Commit changes
+    //        4. Merge back to source branch
+    //        5. Delete ephemeral branch
+    //
+    //        Using a transaction the code for this flow will look like this:
+    //
+    //        .. code-block:: python
+    //
+    //            import lakefs
+    //
+    //            branch = lakefs.repository("<repository_name>").branch("<branch_name>")
+    //            with branch.transact(commit_message="my transaction") as tx:
+    //                for obj in tx.objects(prefix="prefix_to_delete/"):  # Delete some objects
+    //                    obj.delete()
+    //
+    //                # Create new object
+    //                tx.object("new_object").upload("new object data")
+    //
+    //        Note that unlike database transactions, lakeFS transaction does not take a "lock" on the branch, and therefore
+    //        the transaction might fail due to changes in source branch after the transaction was created.
+    //
+    //        :param commit_message: once the transaction is committed, a commit is created with this message
+    //        :param commit_metadata: user metadata for the transaction commit
+    //        :param delete_branch_on_error: Defaults to True. Ensures ephemeral branch is deleted on error.
+    //        :return: a Transaction object to perform the operations on
+    //        """
+    //    with Transaction(self._repo_id, self._id, commit_message, commit_metadata, delete_branch_on_error,
+    //    self._client) as tx:
+    //    yield tx
 }

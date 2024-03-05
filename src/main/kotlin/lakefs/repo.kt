@@ -52,7 +52,7 @@ class Repo(val id: String,
             if (existOk)
                 monkeyGetRepository?.invoke(id) ?: client.repositoriesApi.getRepository(id).execute()
             else
-                throw ex
+                throw ex.specificException
         }
         properties = RepositoryProperties(repo)
         return this
@@ -61,7 +61,9 @@ class Repo(val id: String,
 
     internal var monkeyDeleteRepository: (() -> Unit)? = null
     /** Delete repository from lakeFS server */
-    fun delete() = monkeyDeleteRepository?.invoke() ?: client.repositoriesApi.deleteRepository(id).execute()
+    fun delete() = withApiExceptionHandler {
+        monkeyDeleteRepository?.invoke() ?: client.repositoriesApi.deleteRepository(id).execute()
+    }
 
     /**
      * Return a branch object using the current repository id and client

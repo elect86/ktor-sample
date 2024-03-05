@@ -1,6 +1,8 @@
-package lakefs
+package utests
 
 import io.lakefs.clients.sdk.model.RepositoryCreation
+import lakefs.Repo
+import lakefs.defaulApiClient
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
