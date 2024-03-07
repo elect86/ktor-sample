@@ -18,7 +18,7 @@ import net.pwall.json.schema.JSONSchema
 
 // change port
 fun main() {
-    embeddedServer(Netty, port = 8081, host = "127.0.0.1", module = Application::module)
+    embeddedServer(Netty, port = 8082, host = "127.0.0.1", module = Application::module)
         .start(wait = true)
 }
 
@@ -72,7 +72,7 @@ fun Application.configureRouting() {
                 call.respond(io.ktor.http.HttpStatusCode.NotAcceptable, "multiple DATASET.json found\n")
                 return@post
             }
-            val datasetDiff = datasetDiffs.first()
+            val datasetDiff = datasetDiffs.firstOrNull()
             if (datasetDiff == null) {
                 call.respond(io.ktor.http.HttpStatusCode.NotFound, "DATASET.json not found\n")
                 return@post
