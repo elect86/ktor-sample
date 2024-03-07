@@ -1,5 +1,6 @@
 package com.example
 
+import io.lakefs.clients.sdk.BranchesApi
 import io.lakefs.clients.sdk.InternalApi
 import io.lakefs.clients.sdk.ObjectsApi
 import io.lakefs.clients.sdk.RepositoriesApi
@@ -10,15 +11,15 @@ import lakefs.repos
 
 fun main() {
     val defaultClient = defaulApiClient {
-        val ip = "192.168.11.104"
-//        val ip = "localhost"
+//        val ip = "192.168.11.104"
+        val ip = "localhost"
         basePath = "http://$ip:8000/api/v1"
         // Configure HTTP basic authorization: basic_auth
         basicAuth {
-//            username = "AKIAIOSFOLQUICKSTART"
-//            password = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
-            username = "AKIAJO5KUOU6ZQUPWGCQ"
-            password = "KzHyu4+T/ayjwRezQhJkpcbOmaDDl1AZVhKa4s4/"
+            username = "AKIAIOSFOLQUICKSTART"
+            password = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+//            username = "AKIAJO5KUOU6ZQUPWGCQ"
+//            password = "KzHyu4+T/ayjwRezQhJkpcbOmaDDl1AZVhKa4s4/"
         }
 
 //                println(repos)
@@ -80,7 +81,9 @@ fun main() {
 ////        defaultApiClient.branchesApi.cre
     }
 
-//    defaultClient.repo("test").main.
+    val api = BranchesApi(defaultClient)
+    val diffList = api.diffBranch("test", "main").execute()
+    diffList.results.forEach { println(it.path) }
 
 //    val api = RepositoriesApi(defaultClient)
 //    val repositoryList = api.listRepositories().execute()

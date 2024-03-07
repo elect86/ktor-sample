@@ -18,7 +18,7 @@ import net.pwall.json.schema.JSONSchema
 
 // change port
 fun main() {
-    embeddedServer(Netty, port = 8080, host = "127.0.0.1", module = Application::module)
+    embeddedServer(Netty, port = 8082, host = "127.0.0.1", module = Application::module)
         .start(wait = true)
 }
 
@@ -67,11 +67,11 @@ fun Application.configureRouting() {
 
             val api = BranchesApi(defaultClient)
             val diffList = api.diffBranch(bodySchema.repositoryId, bodySchema.branchId).execute()
-            diffList.results.forEach { println(it.path) }
+//            diffList.results.forEach { println(it.path) }
 
-            val files = diffList.results.filter { it.type == Diff.TypeEnum.ADDED }.map { it.path }
             fun check(files: List<String>) {
-//                println("[check] $files")
+                println("[check]")
+                for (file in files) println(file)
                 val (dirs, normalFiles) = files.partition { '/' in it }
                 if (DATASETjson in normalFiles)
                     return
@@ -79,6 +79,7 @@ fun Application.configureRouting() {
                     check(dirs.map { it.substringAfter('/') })
             }
 
+            val files = diffList.results.filter { it.type == Diff.TypeEnum.ADDED }.map { it.path }
             check(files)
             val datasetDiffs = diffList.results.filter {
                 it.type == Diff.TypeEnum.ADDED && it.path.substringAfterLast('/') == DATASETjson
