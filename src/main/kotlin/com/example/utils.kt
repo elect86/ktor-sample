@@ -95,3 +95,17 @@ data class BodySchema(@SerialName("event_type")
                       val commitMetadata: Tuples? = null,
                       @SerialName("tag_id")
                       val tagId: String? = null)
+
+class NotConformantDatasetException : Exception {
+    constructor() : super()
+    constructor(message: String) : super(message)
+    constructor(message: String, cause: Throwable) : super(message, cause)
+    constructor(cause: Throwable) : super(cause)
+}
+
+class NoDatasetFoundException : Exception {
+    constructor() : super()
+    constructor(message: String) : super(message)
+    constructor(message: String, cause: Throwable) : super(message, cause)
+    constructor(cause: Throwable) : super(cause)
+}

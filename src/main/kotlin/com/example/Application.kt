@@ -8,6 +8,7 @@ import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.lakefs.clients.sdk.ApiException
 import io.lakefs.clients.sdk.BranchesApi
 import io.lakefs.clients.sdk.Configuration
 import io.lakefs.clients.sdk.auth.HttpBasicAuth
@@ -29,11 +30,14 @@ fun Application.module() {
     }
 }
 
+val ListEntriesLimitMax = 1_000
+
 fun Application.configureRouting() {
     routing {
         post("/webhooks/format") {
 
             val DATASETjson = "DATASET.json"
+            val SCHEMAjson = "SCHEMA.json"
 
             /*
             BodySchema
@@ -50,12 +54,14 @@ fun Application.configureRouting() {
              }*/
 
             val bodySchema = call.receive<BodySchema>()
-//            println(bodySchema)
+            //            println(bodySchema)
 
             if (bodySchema.commitMetadata?.get("disable") == "1") {
                 call.respond(io.ktor.http.HttpStatusCode.OK, "no checks\n")
                 return@post
             }
+            val repo = bodySchema.repositoryId
+            val branch = bodySchema.branchId
 
             val defaultClient = Configuration.getDefaultApiClient()
             defaultClient.setBasePath("http://localhost:8000/api/v1")
@@ -66,43 +72,53 @@ fun Application.configureRouting() {
             basic_auth.password = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
 
             val api = BranchesApi(defaultClient)
-            val diffList = api.diffBranch(bodySchema.repositoryId, bodySchema.branchId).execute()
-//            diffList.results.forEach { println(it.path) }
+            val diffList = api.diffBranch(repo, branch).amount(ListEntriesLimitMax).execute()
+            diffList.results.forEach { println(it.path) }
 
-            fun check(files: List<String>) {
-                println("[check]")
-                for (file in files) println(file)
-                val (dirs, normalFiles) = files.partition { '/' in it }
-                if (DATASETjson in normalFiles)
-                    return
-                if (dirs.isNotEmpty())
-                    check(dirs.map { it.substringAfter('/') })
-            }
+            val schemaFile =
+                try {
+                    defaultClient.objectsApi.getObject(repo, branch, SCHEMAjson).execute()
+                } catch (e: ApiException) {
+                    call.respond(io.ktor.http.HttpStatusCode.NotFound, "$SCHEMAjson not found\n")
+                    throw e
+                }
 
-            val files = diffList.results.filter { it.type == Diff.TypeEnum.ADDED }.map { it.path }
-            check(files)
-            val datasetDiffs = diffList.results.filter {
-                it.type == Diff.TypeEnum.ADDED && it.path.substringAfterLast('/') == DATASETjson
-            }
-            if (datasetDiffs.size > 1) {
-                call.respond(io.ktor.http.HttpStatusCode.NotAcceptable, "multiple $DATASETjson found\n")
-                return@post
-            }
-            val datasetDiff = datasetDiffs.firstOrNull()
-            if (datasetDiff == null) {
-                call.respond(io.ktor.http.HttpStatusCode.NotFound, "$DATASETjson not found\n")
-                return@post
-            }
-
-            val schemaFile = defaultClient.objectsApi.getObject(bodySchema.repositoryId, bodySchema.branchId, "SCHEMA.json").execute()
             val schema = JSONSchema.parse(schemaFile)
-            val datasetFile = defaultClient.objectsApi.getObject(bodySchema.repositoryId, bodySchema.branchId, datasetDiff.path).execute()
-            val validation = schema.validate(datasetFile.readText())
 
-            if (!validation)
-                call.respond(io.ktor.http.HttpStatusCode.NotAcceptable, "$DATASETjson is not conformant\n")
-            else
-                call.respond(io.ktor.http.HttpStatusCode.OK, "$DATASETjson found and conformant\n")
+            fun check(path: String, files: List<String>) {
+                //                println("==========[check]==========")
+                //                for (file in files) println(file)
+                val (paths, normalFiles) = files.partition { '/' in it }
+                if ("DATASET.json" in normalFiles) {
+                    val datasetFile = defaultClient.objectsApi.getObject(repo, branch, "$path$DATASETjson").execute()
+                    if (!schema.validate(datasetFile.readText()))
+                        throw NotConformantDatasetException("$path$DATASETjson is not conformant to the Schema")
+                    return
+                }
+                if (paths.isEmpty())
+                    throw NoDatasetFoundException("No $DATASETjson found in $path")
+                val mapDirs = paths.groupBy({ it.substringBefore('/') + '/' }) { it.substringAfter('/') }
+                //                println("=====[dirs]=====")
+                //                println(mapDirs)
+                for ((dir, dirFiles) in mapDirs)
+                    check("$path$dir", dirFiles)
+            }
+
+            // Since suspension functions (`call::respond`) can be called only within coroutine body
+            // (which `check` isn't), then we will respond accordingly to the exception thrown type
+            try {
+                val files = diffList.results.filter { it.type == Diff.TypeEnum.ADDED }.map { it.path }
+                check("", files)
+            } catch (ex: NotConformantDatasetException) {
+                call.respond(io.ktor.http.HttpStatusCode.NotAcceptable, "${ex.message}\n")
+                return@post
+            } catch (ex: NoDatasetFoundException) {
+                call.respond(io.ktor.http.HttpStatusCode.NotAcceptable, "${ex.message}\n")
+                return@post
+            }
+
+            // if we made so far, everything is fine
+            call.respond(io.ktor.http.HttpStatusCode.OK, "$DATASETjson found and conformant\n")
         }
     }
 }
