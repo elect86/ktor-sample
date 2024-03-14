@@ -80,7 +80,7 @@ fun Application.configureRouting() {
                     defaultClient.objectsApi.getObject(repo, branch, SCHEMAjson).execute()
                 } catch (e: ApiException) {
                     call.respond(io.ktor.http.HttpStatusCode.NotFound, "$SCHEMAjson not found\n")
-                    throw e
+                    return@post
                 }
 
             val schema = JSONSchema.parse(schemaFile)
