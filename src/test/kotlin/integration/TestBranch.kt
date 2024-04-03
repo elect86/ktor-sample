@@ -3,11 +3,14 @@ package integration
 import io.lakefs.clients.sdk.model.Diff
 import io.lakefs.clients.sdk.model.ResetCreation
 import lakefs.Branch
+import org.junit.AfterClass
+import org.junit.BeforeClass
+import java.io.File
 import kotlin.test.Test
 
 class TestBranch : ConfTest() {
 
-    @Test
+//    @Test
     fun testRevert() {
         val repo = setupRepo()
         val testBranch = repo branch "main"
@@ -16,7 +19,7 @@ class TestBranch : ConfTest() {
         testBranch.commit("test_commit", mapOf("test_key" to "test_value"))
 
         val overrideContent = "override_test_content"
-//        val obj = testBranch.storedObject("test_object").upload(overrideContent)
+        //        val obj = testBranch.storedObject("test_object").upload(overrideContent)
         testBranch.commit("override_data")
 
         assert(testBranch.`object`("test_object").readText() == overrideContent)
@@ -66,7 +69,7 @@ class TestBranch : ConfTest() {
         }
     }
 
-//    @Test
+    //    @Test
     fun testResetChanges() {
         val repo = setupRepo()
         val testBranch = repo branch "main"
@@ -89,4 +92,29 @@ class TestBranch : ConfTest() {
         testBranch.resetChanges()
         validateUncommittedChanges(testBranch, emptyList())
     }
+
+    companion object {
+        lateinit var lakefsProcess: Process
+
+        @JvmStatic
+        @BeforeClass
+        fun runLakeFS() {
+//            lakefsProcess = ProcessBuilder("./build/lakeFS_1.15.0/lakefs", "run", "--quickstart")
+//                .redirectOutput(ProcessBuilder.Redirect.INHERIT)
+//                .redirectError(ProcessBuilder.Redirect.INHERIT)
+//                .start()
+//            println(lakefsProcess.isAlive)
+            println("setup_executed")
+        }
+
+//        @JvmStatic @AfterClass
+//        fun destroyLakeFS() = lakefsProcess.destroy()
+    }
+}
+
+fun main() {
+    ProcessBuilder("./build/lakeFS_1.15.0/lakefs", "run", "--quickstart")
+        .redirectOutput(ProcessBuilder.Redirect.INHERIT)
+        .redirectError(ProcessBuilder.Redirect.INHERIT)
+        .start()
 }

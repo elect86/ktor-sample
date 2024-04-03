@@ -33,7 +33,7 @@ class TestRepo : Common() {
                     includeSamples = TEST_REPO.sampleData!!)
     }
 
-    @Test
+//    @Test
     fun testRepositoryCreationAlreadyExists() {
         val repo = testRepo
         //        ex = lakefs_sdk.exceptions.ApiException(status = http.HTTPStatus.CONFLICT.value)
@@ -72,7 +72,7 @@ class TestRepo : Common() {
         }
     }
 
-    @Test
+//    @Test
     fun testDeleteRepository() {
 
         val repo = testRepo

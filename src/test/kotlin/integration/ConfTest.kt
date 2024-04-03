@@ -6,7 +6,7 @@ import lakefs.defaulApiClient
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import java.net.URLEncoder
-import java.util.UUID
+import java.util.*
 
 open class ConfTest {
 
